@@ -2,6 +2,7 @@ package grpc.greeting.server;
 
 import com.proto.greet.*;
 import io.grpc.stub.StreamObserver;
+import io.grpc.stub.StreamObservers;
 
 public class GreetServiceImpl extends GreetServiceGrpc.GreetServiceImplBase {
 
@@ -43,5 +44,33 @@ public class GreetServiceImpl extends GreetServiceGrpc.GreetServiceImplBase {
         } finally {
             responseObserver.onCompleted();
         }
+    }
+
+    @Override
+    public StreamObserver<LongGreetRequest> longGreet(StreamObserver<LongGreetResponse> responseObserver) {
+        return new StreamObserver<LongGreetRequest>() {
+
+            String responseMessage = "";
+
+            @Override
+            public void onNext(LongGreetRequest request) {
+                responseMessage += "Hello, " + request.getGreeting().getFirstName() + "\n";
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                responseObserver.onError(t);
+            }
+
+            @Override
+            public void onCompleted() {
+
+                LongGreetResponse response = LongGreetResponse.newBuilder()
+                        .setResult(responseMessage)
+                        .build();
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        };
     }
 }
