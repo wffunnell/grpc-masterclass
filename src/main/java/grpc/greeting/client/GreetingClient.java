@@ -26,15 +26,16 @@ public class GreetingClient {
                 .usePlaintext() //added due to lack of SSL setup
                 .build();
 
-        unaryCall(channel);
-        serverStreaming(channel);
-        clientStreaming(channel);
+        doUnaryCall(channel);
+        doServerStreaming(channel);
+        doClientStreaming(channel);
+        doBiDirecetionalStreaming(channel);
 
         System.out.println("Shutting down channel");
         channel.shutdown();
     }
 
-    private void unaryCall(ManagedChannel channel) {
+    private void doUnaryCall(ManagedChannel channel) {
         System.out.println("Unary call");
 
         GreetRequest request = GreetRequest.newBuilder()
@@ -47,7 +48,7 @@ public class GreetingClient {
         System.out.println("Unary response: " + greetResponse.getResult());
     }
 
-    private void serverStreaming(ManagedChannel channel) {
+    private void doServerStreaming(ManagedChannel channel) {
         System.out.println("Server streaming");
 
         GreetManyTimesRequest greetManyTimesRequest = GreetManyTimesRequest.newBuilder()
@@ -62,14 +63,14 @@ public class GreetingClient {
                 });
     }
 
-    private void clientStreaming(ManagedChannel channel) {
+    private void doClientStreaming(ManagedChannel channel) {
         System.out.println("Client streaming");
 
         CountDownLatch latch = new CountDownLatch(1);
 
         GreetServiceGrpc.GreetServiceStub asyncClient = GreetServiceGrpc.newStub(channel);
 
-        StreamObserver<LongGreetResponse> printResponseObserver = new StreamObserver<LongGreetResponse>() {
+        StreamObserver<LongGreetResponse> responseObserver = new StreamObserver<LongGreetResponse>() {
             @Override
             public void onNext(LongGreetResponse response) {
                 System.out.println("Received Long Greet response: " + response.getResult());
@@ -87,7 +88,7 @@ public class GreetingClient {
             }
         };
 
-        StreamObserver<LongGreetRequest> requestObserver = asyncClient.longGreet(printResponseObserver);
+        StreamObserver<LongGreetRequest> requestObserver = asyncClient.longGreet(responseObserver);
         for (int i = 0; i < 10; i++) {
             Greeting greeting = Greeting.newBuilder()
                     .setFirstName("Will " + i)
@@ -109,4 +110,56 @@ public class GreetingClient {
             e.printStackTrace();
         }
     }
+
+    private void doBiDirecetionalStreaming(ManagedChannel channel) {
+        System.out.println("Bi-directional streaming");
+
+        CountDownLatch latch = new CountDownLatch(3);
+
+        GreetServiceGrpc.GreetServiceStub asyncClient = GreetServiceGrpc.newStub(channel);
+
+        StreamObserver<GreetEveryoneResponse> responseObserver = new StreamObserver<GreetEveryoneResponse>() {
+            @Override
+            public void onNext(GreetEveryoneResponse value) {
+                System.out.println("Received Greet Everyone response: " + value.getResult());
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                t.printStackTrace();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("Server has completed greeting everyone");
+                latch.countDown();
+            }
+        };
+
+        StreamObserver<GreetEveryoneRequest> requestObserver = asyncClient.greetEveryone(responseObserver);
+
+        GreetEveryoneRequest steve = GreetEveryoneRequest.newBuilder()
+                .setGreeting(Greeting.newBuilder().setFirstName("Steve"))
+                .build();
+        requestObserver.onNext(steve);
+
+        GreetEveryoneRequest bill = GreetEveryoneRequest.newBuilder()
+                .setGreeting(Greeting.newBuilder().setFirstName("Bill"))
+                .build();
+        requestObserver.onNext(bill);
+
+        GreetEveryoneRequest john = GreetEveryoneRequest.newBuilder()
+                .setGreeting(Greeting.newBuilder().setFirstName("John"))
+                .build();
+        requestObserver.onNext(john);
+
+        requestObserver.onCompleted();
+
+        try {
+            latch.await(3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
 }

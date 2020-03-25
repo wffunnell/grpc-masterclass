@@ -2,7 +2,6 @@ package grpc.greeting.server;
 
 import com.proto.greet.*;
 import io.grpc.stub.StreamObserver;
-import io.grpc.stub.StreamObservers;
 
 public class GreetServiceImpl extends GreetServiceGrpc.GreetServiceImplBase {
 
@@ -69,6 +68,32 @@ public class GreetServiceImpl extends GreetServiceGrpc.GreetServiceImplBase {
                         .setResult(responseMessage)
                         .build();
                 responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        };
+    }
+
+    @Override
+    public StreamObserver<GreetEveryoneRequest> greetEveryone(StreamObserver<GreetEveryoneResponse> responseObserver) {
+
+        return new StreamObserver<GreetEveryoneRequest>() {
+            @Override
+            public void onNext(GreetEveryoneRequest value) {
+
+                GreetEveryoneResponse response = GreetEveryoneResponse.newBuilder()
+                        .setResult("Sending response for: " + value.getGreeting().getFirstName())
+                        .build();
+
+                responseObserver.onNext(response);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                t.printStackTrace();
+            }
+
+            @Override
+            public void onCompleted() {
                 responseObserver.onCompleted();
             }
         };
