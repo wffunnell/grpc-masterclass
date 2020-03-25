@@ -1,14 +1,13 @@
 package grpc.greeting.client;
 
 import com.proto.dummy.DummyServiceGrpc;
-import com.proto.greet.GreetRequest;
-import com.proto.greet.GreetResponse;
-import com.proto.greet.GreetServiceGrpc;
-import com.proto.greet.Greeting;
+import com.proto.greet.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
-public class Client {
+import java.util.Iterator;
+
+public class GreetingClient {
 
     public static void main(String[] args) {
         System.out.println("Hello, I am a gRPC client");
@@ -28,12 +27,21 @@ public class Client {
                 .setFirstName("Will")
                 .setLastName("Funnell")
                 .build();
+//
+//        GreetRequest request = GreetRequest.newBuilder()
+//                .setGreeting(greeting)
+//                .build();
+//
+//        GreetResponse greetResponse = greetClient.greet(request);
 
-        GreetRequest request = GreetRequest.newBuilder()
+        GreetManyTimesRequest greetManyTimesRequest = GreetManyTimesRequest.newBuilder()
                 .setGreeting(greeting)
                 .build();
 
-        GreetResponse greetResponse = greetClient.greet(request);
+        greetClient.greetManyTimes(greetManyTimesRequest)
+                .forEachRemaining(greetManyTimesResponse -> {
+                    System.out.println(greetManyTimesResponse.getResult());
+                });
 
         System.out.println("Shutting down channel");
         channel.shutdown();
